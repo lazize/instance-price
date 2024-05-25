@@ -1,0 +1,219 @@
+{
+  "product": {
+    "productFamily": "Compute Instance",
+    "attributes": {
+      "enhancedNetworkingSupported": "No",
+      "intelTurboAvailable": "No",
+      "memory": "3.75 GiB",
+      "vcpu": "1",
+      "classicnetworkingsupport": "true",
+      "capacitystatus": "Used",
+      "locationType": "AWS Region",
+      "storage": "1 x 410 SSD",
+      "instanceFamily": "General purpose",
+      "operatingSystem": "Linux",
+      "intelAvx2Available": "No",
+      "regionCode": "sa-east-1",
+      "physicalProcessor": "Intel Xeon Family",
+      "ecu": "2",
+      "networkPerformance": "Moderate",
+      "servicename": "Amazon Elastic Compute Cloud",
+      "gpuMemory": "NA",
+      "vpcnetworkingsupport": "true",
+      "instanceType": "m1.medium",
+      "tenancy": "Shared",
+      "usagetype": "SAE1-BoxUsage:m1.medium",
+      "normalizationSizeFactor": "2",
+      "intelAvxAvailable": "No",
+      "servicecode": "AmazonEC2",
+      "licenseModel": "No License required",
+      "currentGeneration": "No",
+      "preInstalledSw": "NA",
+      "location": "South America (Sao Paulo)",
+      "processorArchitecture": "32-bit or 64-bit",
+      "marketoption": "OnDemand",
+      "operation": "RunInstances",
+      "availabilityzone": "NA"
+    },
+    "sku": "6TN6BMN8S44CMRDW"
+  },
+  "serviceCode": "AmazonEC2",
+  "terms": {
+    "OnDemand": {
+      "6TN6BMN8S44CMRDW.JRTCKXETXF": {
+        "priceDimensions": {
+          "6TN6BMN8S44CMRDW.JRTCKXETXF.6YS6EN2CT7": {
+            "unit": "Hrs",
+            "endRange": "Inf",
+            "description": "$0.117 per On Demand Linux m1.medium Instance Hour",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.JRTCKXETXF.6YS6EN2CT7",
+            "beginRange": "0",
+            "pricePerUnit": {
+              "USD": "0.1170000000"
+            }
+          }
+        },
+        "sku": "6TN6BMN8S44CMRDW",
+        "effectiveDate": "2024-05-01T00:00:00Z",
+        "offerTermCode": "JRTCKXETXF",
+        "termAttributes": {}
+      }
+    },
+    "Reserved": {
+      "6TN6BMN8S44CMRDW.4NA7Y494T4": {
+        "priceDimensions": {
+          "6TN6BMN8S44CMRDW.4NA7Y494T4.6YS6EN2CT7": {
+            "unit": "Hrs",
+            "endRange": "Inf",
+            "description": "Linux/UNIX (Amazon VPC), m1.medium reserved instance applied",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.4NA7Y494T4.6YS6EN2CT7",
+            "beginRange": "0",
+            "pricePerUnit": {
+              "USD": "0.0680000000"
+            }
+          }
+        },
+        "sku": "6TN6BMN8S44CMRDW",
+        "effectiveDate": "2016-08-31T23:59:59Z",
+        "offerTermCode": "4NA7Y494T4",
+        "termAttributes": {
+          "LeaseContractLength": "1yr",
+          "OfferingClass": "standard",
+          "PurchaseOption": "No Upfront"
+        }
+      },
+      "6TN6BMN8S44CMRDW.6QCMYABX3D": {
+        "priceDimensions": {
+          "6TN6BMN8S44CMRDW.6QCMYABX3D.6YS6EN2CT7": {
+            "unit": "Hrs",
+            "endRange": "Inf",
+            "description": "USD 0.0 per Linux/UNIX (Amazon VPC), m1.medium reserved instance applied",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.6QCMYABX3D.6YS6EN2CT7",
+            "beginRange": "0",
+            "pricePerUnit": {
+              "USD": "0.0000000000"
+            }
+          },
+          "6TN6BMN8S44CMRDW.6QCMYABX3D.2TG2D8R56U": {
+            "unit": "Quantity",
+            "description": "Upfront Fee",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.6QCMYABX3D.2TG2D8R56U",
+            "pricePerUnit": {
+              "USD": "495"
+            }
+          }
+        },
+        "sku": "6TN6BMN8S44CMRDW",
+        "effectiveDate": "2016-09-30T23:59:59Z",
+        "offerTermCode": "6QCMYABX3D",
+        "termAttributes": {
+          "LeaseContractLength": "1yr",
+          "OfferingClass": "standard",
+          "PurchaseOption": "All Upfront"
+        }
+      },
+      "6TN6BMN8S44CMRDW.HU7G6KETJZ": {
+        "priceDimensions": {
+          "6TN6BMN8S44CMRDW.HU7G6KETJZ.6YS6EN2CT7": {
+            "unit": "Hrs",
+            "endRange": "Inf",
+            "description": "Linux/UNIX (Amazon VPC), m1.medium reserved instance applied",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.HU7G6KETJZ.6YS6EN2CT7",
+            "beginRange": "0",
+            "pricePerUnit": {
+              "USD": "0.0230000000"
+            }
+          },
+          "6TN6BMN8S44CMRDW.HU7G6KETJZ.2TG2D8R56U": {
+            "unit": "Quantity",
+            "description": "Upfront Fee",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.HU7G6KETJZ.2TG2D8R56U",
+            "pricePerUnit": {
+              "USD": "304"
+            }
+          }
+        },
+        "sku": "6TN6BMN8S44CMRDW",
+        "effectiveDate": "2016-09-30T23:59:59Z",
+        "offerTermCode": "HU7G6KETJZ",
+        "termAttributes": {
+          "LeaseContractLength": "1yr",
+          "OfferingClass": "standard",
+          "PurchaseOption": "Partial Upfront"
+        }
+      },
+      "6TN6BMN8S44CMRDW.NQ3QZPMQV9": {
+        "priceDimensions": {
+          "6TN6BMN8S44CMRDW.NQ3QZPMQV9.6YS6EN2CT7": {
+            "unit": "Hrs",
+            "endRange": "Inf",
+            "description": "USD 0.0 per Linux/UNIX (Amazon VPC), m1.medium reserved instance applied",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.NQ3QZPMQV9.6YS6EN2CT7",
+            "beginRange": "0",
+            "pricePerUnit": {
+              "USD": "0.0000000000"
+            }
+          },
+          "6TN6BMN8S44CMRDW.NQ3QZPMQV9.2TG2D8R56U": {
+            "unit": "Quantity",
+            "description": "Upfront Fee",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.NQ3QZPMQV9.2TG2D8R56U",
+            "pricePerUnit": {
+              "USD": "1044"
+            }
+          }
+        },
+        "sku": "6TN6BMN8S44CMRDW",
+        "effectiveDate": "2016-09-30T23:59:59Z",
+        "offerTermCode": "NQ3QZPMQV9",
+        "termAttributes": {
+          "LeaseContractLength": "3yr",
+          "OfferingClass": "standard",
+          "PurchaseOption": "All Upfront"
+        }
+      },
+      "6TN6BMN8S44CMRDW.38NPMPTW36": {
+        "priceDimensions": {
+          "6TN6BMN8S44CMRDW.38NPMPTW36.6YS6EN2CT7": {
+            "unit": "Hrs",
+            "endRange": "Inf",
+            "description": "Linux/UNIX (Amazon VPC), m1.medium reserved instance applied",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.38NPMPTW36.6YS6EN2CT7",
+            "beginRange": "0",
+            "pricePerUnit": {
+              "USD": "0.0230000000"
+            }
+          },
+          "6TN6BMN8S44CMRDW.38NPMPTW36.2TG2D8R56U": {
+            "unit": "Quantity",
+            "description": "Upfront Fee",
+            "appliesTo": [],
+            "rateCode": "6TN6BMN8S44CMRDW.38NPMPTW36.2TG2D8R56U",
+            "pricePerUnit": {
+              "USD": "507"
+            }
+          }
+        },
+        "sku": "6TN6BMN8S44CMRDW",
+        "effectiveDate": "2016-09-30T23:59:59Z",
+        "offerTermCode": "38NPMPTW36",
+        "termAttributes": {
+          "LeaseContractLength": "3yr",
+          "OfferingClass": "standard",
+          "PurchaseOption": "Partial Upfront"
+        }
+      }
+    }
+  },
+  "version": "20240523151501",
+  "publicationDate": "2024-05-23T15:15:01Z"
+}
