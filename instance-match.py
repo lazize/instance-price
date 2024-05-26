@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 
@@ -232,17 +233,58 @@ def print_instance(instances: list[dict]) -> None:
 
 
 def main():
-    # TODO: Read parameters from command line, including file names
-    region_name = "sa-east-1"
-    operating_system = "Linux"
+    operating_system_choices = ["Linux", "RHEL", "SUSE", "Ubuntu Pro", "Windows"]
+    offering_class_choices = ["standard", "convertible"]
+    lease_contract_length_choices = ["3yr", "1yr"]
+
+    description = """Get instance recommendation from AWS pricing."""
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("region_name", help="AWS region to get pricing")
+    parser.add_argument("--operating-system", help="AWS pricing for operating system system", choices=operating_system_choices, default=operating_system_choices[0])
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--on-demand", help="Best price for on-demand instance", default=True, action=argparse.BooleanOptionalAction)
+    group.add_argument("--reserved", help="Best price for reserved instance (only No Upfront)", default=False, action=argparse.BooleanOptionalAction)
+
+    group_reserved = parser.add_argument_group("Reserved", "Get best price for reserved instance (only No Upfront). Cannot be used together with 'On-Demand'")
+    group_reserved.add_argument("--offering-class", help="Offering class for reserved instance", choices=offering_class_choices, default=offering_class_choices[0])
+    group_reserved.add_argument("--lease-contract-length", help="Length for reserved instance", choices=lease_contract_length_choices, default=lease_contract_length_choices[0])
+    args = parser.parse_args()
+
+    region_name = args.region_name
+    operating_system = args.operating_system
+
+    # print("#####################################")
+    # print(args)
+    # print("#####################################")
+    # return
 
     # Apparently price list is already sorted by family release
     price_list = load_price_list(region_name, operating_system)
 
-    # Sort price list by defined price
-    on_demand_sorted = price_list_sorted(price_list, "price_ondemand")
-    # price_reserved = Non Upfront Reserved Instance (3-year)
-    reserved_sorted = price_list_sorted(price_list, "price_reserved")
+    if args.on_demand:
+        selcted_price = "on-demand"
+    elif args.reserved:
+        selcted_price = f"{args.offering_class}-{args.lease_contract_length}"
+    else:
+        print("ERROR - Please select 'On-Demand' or 'Reserved'")
+        return
+
+    price_options = {
+        "on-demand": "price_ondemand",
+        "standard-1yr": "price_nuri_1yr_standard",
+        "standard-3yr": "price_nuri_3yr_standard",
+        "convertible-1yr": "price_nuri_1yr_convertible",
+        "convertible-3yr": "price_nuri_3yr_convertible",
+    }
+    price_key = price_options[selcted_price]
+    price_sorted = price_list_sorted(price_list, price_key)
+
+    # # Sort price list by defined price
+    # on_demand_sorted = price_list_sorted(price_list, "price_ondemand")
+    # # price_reserved = Non Upfront Reserved Instance (3-year)
+    # reserved_sorted = price_list_sorted(price_list, "price_reserved")
 
 
     #################################################
@@ -254,7 +296,7 @@ def main():
         parts = item.replace("\t", " ").strip().split(" ")
         memory = float(parts[0])
         cores = int(parts[3])
-        print_instance_recommendation(on_demand_sorted, duplicate_key="price_ondemand", cpu_key="cores_value", memory=memory, condition=lambda x: x["cores_value"] >= cores and x["is_intel"])
+        print_instance_recommendation(price_sorted, duplicate_key=price_key, cpu_key="cores_value", memory=memory, condition=lambda x: x["cores_value"] >= cores and x["is_intel"])
         #print_instance_recommendation(reserved_sorted, duplicate_key="price_reserved", cpu_key="cores_value", memory=memory, condition=lambda x: x["cores_value"] >= cores and x["is_intel"])
 
     # print_result(get_instance(on_demand_sorted, duplicate_key="price_ondemand", memory=170, condition=lambda x: x["vcpu_value"] >= 4 and x["is_intel"]))
