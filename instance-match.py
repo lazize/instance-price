@@ -1,5 +1,114 @@
 import json
+import os
 
+import boto3
+
+# Instance Types
+def describe_instance_types(region_name: str) -> dict:
+    resp = {"InstanceTypes": []}
+    client = boto3.client("ec2", region_name=region_name)
+    paginator = client.get_paginator('describe_instance_types')
+    response_iterator = paginator.paginate()
+    for page in response_iterator:
+        for instance_type in page["InstanceTypes"]:
+            resp["InstanceTypes"].append(instance_type)
+    return resp
+
+def load_instance_types(region_name: str) -> dict:
+    instance_types_file_name = f"instance-types-{region_name}.json"
+    if not os.path.isfile(instance_types_file_name):
+        with open(instance_types_file_name, "w") as f:
+            describe = describe_instance_types(region_name)
+            json.dump(describe, f, indent=4)
+
+    # Describe Instance Types from file
+    with open(instance_types_file_name) as f:
+        instance_types_json = json.load(f)
+
+    instance_types={}
+    for x in instance_types_json["InstanceTypes"]:
+        key = x["InstanceType"]
+        instance_types[key] = x
+    return instance_types
+
+
+# Price list
+def get_products(region_name: str, operating_system: str) -> dict:
+    ###########################
+    ## Operating System options
+    ##########################
+    # Linux
+    # NA
+    # RHEL
+    # Red Hat Enterprise Linux with HA
+    # SUSE
+    # Ubuntu Pro
+    # Windows
+
+    # Must run in us-east-1
+    client = boto3.client("pricing", region_name="us-east-1")
+    paginator = client.get_paginator('get_products')
+    response_iterator = paginator.paginate(
+        ServiceCode="AmazonEC2",
+        Filters=[
+            { "Type": "TERM_MATCH", "Field": "capacitystatus", "Value": "Used" },
+            { "Type": "TERM_MATCH", "Field": "marketoption", "Value": "OnDemand" },
+            { "Type": "TERM_MATCH", "Field": "regionCode", "Value": region_name },
+            { "Type": "TERM_MATCH", "Field": "operatingSystem", "Value": operating_system },
+            { "Type": "TERM_MATCH", "Field": "servicecode", "Value": "AmazonEC2" },
+            { "Type": "TERM_MATCH", "Field": "tenancy", "Value": "Shared" },
+            { "Type": "TERM_MATCH", "Field": "operation", "Value": "RunInstances" },
+            { "Type": "TERM_MATCH", "Field": "currentGeneration","Value": "Yes" }
+        ]
+    )
+    response = {
+        "FormatVersion": "",
+        "PriceList": [],
+    }
+    for page in response_iterator:
+        response["FormatVersion"] = page["FormatVersion"]
+        response["PriceList"] += page["PriceList"]
+    return response
+
+def load_price_list(region_name: str, operating_system: str) -> dict:
+    price_list_file_name = f"price-list-{region_name}-{operating_system.lower().replace(" ", "")}.json"
+    if not os.path.isfile(price_list_file_name):
+        with open(price_list_file_name, "w") as f:
+            describe = get_products(region_name, operating_system)
+            json.dump(describe, f, indent=4)
+
+    # Get price list from file
+    with open(price_list_file_name) as f:
+        price_list_json = json.load(f)
+
+    instance_types = load_instance_types(region_name)
+    price_list = normalize_price_list_from_json(price_list_json, instance_types)
+    return price_list
+
+def normalize_price_list_from_json(price_list_json: dict, instance_types: dict) -> list[dict]:
+    # Apparently price list is already sorted by family release
+    price_to_remove = []
+    price_list = []
+    for index, x in enumerate(price_list_json["PriceList"]):
+        # Add extra attibutes and convert current ones from string to proper value
+        instance_price = convert_attributes(json.loads(x))
+        instance_price["id"] = index
+
+        # MUST be the last change before append, otherwise remove will fail later
+        if instance_price["product"]["attributes"]["instanceType"] in instance_types:
+            instance_price["describe"] = instance_types[instance_price["product"]["attributes"]["instanceType"]]
+            instance_price["cores_value"] = int(instance_price["describe"]["VCpuInfo"]["DefaultCores"])
+        else:
+            # if it doesn't exist on describe, then it is not valid and it will be removed from price list
+            price_to_remove.append(instance_price)
+        price_list.append(instance_price)
+
+    # Remove invalid price.
+    # The ones without describe instance types
+    for item in price_to_remove:
+        price_list.remove(item)
+
+    return price_list
 
 def convert_attributes(instance_price: dict) -> dict:
     # Memory
@@ -44,54 +153,24 @@ def get_price_ondemand(on_demand: dict) -> float:
             return price
     print("ERROR - OnDemand price, please investigate!")
 
+
+# Price list sorted
+def price_list_sorted(price_list: list[dict], key: str) -> list[dict]:
+    only_valid_price = [ x for x in price_list if x[key] > 0 ]
+    list_sorted = sorted(only_valid_price, key=lambda x: (x[key], x["id"]))
+    return list_sorted
+
+
+# Get Instance
 def remove_duplicate(seq: list, key: str) -> list:
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x[key] in seen or seen_add(x[key]))]
 
-def price_list_sorted(price_list: list[dict], key: str) -> list[dict]:
-    only_valid_price = [ x for x in price_list if x[key] > 0 ]
-    list_sorted = sorted(only_valid_price, key=lambda x: (x[key], x["id"]))
-    # # Remove duplicate
-    # list_sorted.reverse()
-    # list_sorted = remove_duplicate(list_sorted, key)
-    # list_sorted.reverse()
-    return list_sorted
-
-def normalize_price_list_from_json(price_list_json: dict, instance_types: dict) -> list[dict]:
-    # Apparently price list is already sorted by family release
-    price_to_remove = []
-    price_list = []
-    for index, x in enumerate(price_list_json["PriceList"]):
-        # Add extra attibutes and convert current ones from string to proper value
-        instance_price = convert_attributes(json.loads(x))
-        instance_price["id"] = index
-
-        # MUST be the last change before append, otherwise remove will fail later
-        if instance_price["product"]["attributes"]["instanceType"] in instance_types:
-            instance_price["describe"] = instance_types[instance_price["product"]["attributes"]["instanceType"]]
-            instance_price["cores_value"] = int(instance_price["describe"]["VCpuInfo"]["DefaultCores"])
-        else:
-            # if it doesn't exist on describe, then it is not valid and it will be removed from price list
-            price_to_remove.append(instance_price)
-            # print(f'{instance_price["product"]["attributes"]["instanceType"]} not found')
-        price_list.append(instance_price)
-
-    # Remove invalid price
-    for item in price_to_remove:
-        price_list.remove(item)
-
-    return price_list
-
-
 def remove_duplicate_from_beginning(seq: list, key: str) -> list:
     seq.reverse()
-    # print("--->>>>Before")
-    # print_instance(seq)
     seq = remove_duplicate(seq, key)
     seq.reverse()
-    # print("--->>>>After")
-    # print_instance(seq)
     return seq
 
 def get_lower_memory(memory: int) -> int:
@@ -103,10 +182,6 @@ def get_lower_memory(memory: int) -> int:
         return memory - 8
     else:
         return memory - 16
-
-def print_instance(instances: list[dict]) -> None:
-    for x in instances:
-        print(f'{x["id"]:3} {x["product"]["attributes"]["instanceType"]:20} {x["vcpu_value"]:6} {x["memory_gigas"]:10}     {x["price_ondemand"]:<10} {x["price_reserved"]:<10}')
 
 def get_instance(instances: list[dict], duplicate_key: str, memory: float, condition: callable) -> list[dict]:
     match_exactly = [ x for x in instances if x["memory_gigas"] == memory and condition(x) ]
@@ -142,32 +217,27 @@ def get_instance(instances: list[dict], duplicate_key: str, memory: float, condi
     else:
         print("ERROR - This condition should never happens!!!")
 
-def print_result(instances: list[dict], cpu_key: str) -> None:
+def print_result(instances: list[dict]) -> None:
     x = instances[0]
     y = instances[1]
-    print(f'{x["product"]["attributes"]["instanceType"]:20} {x[cpu_key]:6} {x["memory_gigas"]:10}     {x["price_ondemand"]:<10} {x["price_reserved"]:<10}  |  {y["product"]["attributes"]["instanceType"]:20} {y[cpu_key]:6} {y["memory_gigas"]:10}     {y["price_ondemand"]:<10} {y["price_reserved"]:<10}')
+    print(f'{x["product"]["attributes"]["instanceType"]:20} {x["vcpu_value"]:6} {x["cores_value"]:6} {x["memory_gigas"]:10}     {x["price_ondemand"]:<10} {x["price_reserved"]:<10}  |  {y["product"]["attributes"]["instanceType"]:20} {y["vcpu_value"]:6} {y["cores_value"]:6} {y["memory_gigas"]:10}     {y["price_ondemand"]:<10} {y["price_reserved"]:<10}')
 
 def print_instance_recommendation(instances: list[dict], duplicate_key: str, cpu_key: str, memory: float, condition: callable) -> None:
-    print_result(get_instance(instances, duplicate_key, memory, condition), cpu_key)
+    print_result(get_instance(instances, duplicate_key, memory, condition))
+
+# Used only for debug
+def print_instance(instances: list[dict]) -> None:
+    for x in instances:
+        print(f'{x["id"]:3} {x["product"]["attributes"]["instanceType"]:20} {x["vcpu_value"]:6} {x["memory_gigas"]:10}     {x["price_ondemand"]:<10} {x["price_reserved"]:<10}')
+
 
 def main():
     # TODO: Read parameters from command line, including file names
-
-    # Describe Instance Types from file
-    with open("instance-types-us-east-1.json") as f:
-        instance_types_json = json.load(f)
-
-    instance_types={}
-    for x in instance_types_json["InstanceTypes"]:
-        key = x["InstanceType"]
-        instance_types[key] = x
-
-    # Price list from file
-    with open("price-list-us-east-1.json") as f:
-        price_list_json = json.load(f)
+    region_name = "sa-east-1"
+    operating_system = "Linux"
 
     # Apparently price list is already sorted by family release
-    price_list = normalize_price_list_from_json(price_list_json, instance_types)
+    price_list = load_price_list(region_name, operating_system)
 
     # Sort price list by defined price
     on_demand_sorted = price_list_sorted(price_list, "price_ondemand")
