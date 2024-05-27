@@ -6,28 +6,19 @@ import boto3
 
 # Instance Types
 def describe_instance_types(region_name: str) -> dict:
-    resp = {"InstanceTypes": []}
+    resp = []
     client = boto3.client("ec2", region_name=region_name)
     paginator = client.get_paginator('describe_instance_types')
     response_iterator = paginator.paginate()
     for page in response_iterator:
         for instance_type in page["InstanceTypes"]:
-            resp["InstanceTypes"].append(instance_type)
+            resp.append(instance_type)
     return resp
 
 def load_instance_types(region_name: str) -> dict:
-    instance_types_file_name = f"instance-types-{region_name}.json"
-    if not os.path.isfile(instance_types_file_name):
-        with open(instance_types_file_name, "w") as f:
-            describe = describe_instance_types(region_name)
-            json.dump(describe, f, indent=4)
-
-    # Describe Instance Types from file
-    with open(instance_types_file_name) as f:
-        instance_types_json = json.load(f)
-
+    describe = describe_instance_types(region_name)
     instance_types={}
-    for x in instance_types_json["InstanceTypes"]:
+    for x in describe:
         key = x["InstanceType"]
         instance_types[key] = x
     return instance_types
@@ -75,15 +66,14 @@ def load_price_list(region_name: str, operating_system: str) -> dict:
     price_list_file_name = f"price-list-{region_name}-{operating_system.lower().replace(" ", "")}.json"
     if not os.path.isfile(price_list_file_name):
         with open(price_list_file_name, "w") as f:
-            describe = get_products(region_name, operating_system)
-            json.dump(describe, f, indent=4)
+            price_list_json = get_products(region_name, operating_system)
+            instance_types = load_instance_types(region_name)
+            price_list = normalize_price_list_from_json(price_list_json, instance_types)
+            json.dump(price_list, f, indent=4)
 
     # Get price list from file
     with open(price_list_file_name) as f:
-        price_list_json = json.load(f)
-
-    instance_types = load_instance_types(region_name)
-    price_list = normalize_price_list_from_json(price_list_json, instance_types)
+        price_list = json.load(f)
     return price_list
 
 def normalize_price_list_from_json(price_list_json: dict, instance_types: dict) -> list[dict]:
