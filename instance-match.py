@@ -175,56 +175,123 @@ def remove_duplicate_from_beginning(seq: list, key: str) -> list:
     seq.reverse()
     return seq
 
-def get_lower_memory(memory_limits: list[tuple], memory: int) -> int:
-    for limit in memory_limits:
-        limit_size, limit_reduce = limit
-        if memory >= limit_size:
-            return memory - limit_reduce
-    return memory
+# def get_lower_memory(memory_limits: list[tuple], memory: int) -> int:
+#     for limit in memory_limits:
+#         limit_size, limit_reduce = limit
+#         if memory >= limit_size:
+#             return memory - limit_reduce
+#     return memory
 
-def get_lower_cpu(cpu_limits: list[tuple], cpu_value: int) -> int:
-    for limit in cpu_limits:
-        limit_size, limit_reduce = limit
-        if cpu_value >= limit_size:
-            return cpu_value - limit_reduce
-    return cpu_value
-
+# def get_lower_cpu(cpu_limits: list[tuple], cpu_value: int) -> int:
+#     for limit in cpu_limits:
+#         limit_size, limit_reduce = limit
+#         if cpu_value >= limit_size:
+#             return cpu_value - limit_reduce
+#     return cpu_value
 
 def get_right_size_instance(price_list: list[dict], price_key: str, memory: float, cpu_key: str, cpu_value: int, args: any) -> list[dict]: # , memory_limits: list[tuple], cpu_limits: list[tuple]
     filtered = [ x for x in price_list if x["memory_gigas"] <= memory  ] # and x[cpu_key] <= cpu_value
+    if args.debug_right_size:
+        print(f">>> Filtered by memory: <= {memory}")
+        print_instance(filtered, args)
+        print()
+
     # Sort to get the max memory from filter before
     max_memory = max([x["memory_gigas"] for x in filtered])
+    if args.debug_right_size:
+        print(f">>> Max memory: {max_memory}")
+        print()
 
     # Filter again to get only the ones with max memory
     filtered = [ x for x in filtered if x["memory_gigas"] == max_memory ]
+    if args.debug_right_size:
+        print(f">>> Filtered by memory: == {memory}")
+        print_instance(filtered, args)
+        print()
 
     allow_reduce_cpu = args.allow_reduce_cpu
+    if args.debug_right_size:
+        print(f">>> Allow Reduce CPU: {allow_reduce_cpu}")
+        print()
     if not allow_reduce_cpu:
-        filtered = [ x for x in filtered if x[cpu_key] > cpu_value ]
+        filtered = [ x for x in filtered if x[cpu_key] >= cpu_value ]
+        if args.debug_right_size:
+            print(f">>> Filtered by '{cpu_key}': >= {cpu_value}")
+            print_instance(filtered, args)
+            print()
 
     # Add proximity to cpu
     cpu_proximity_list = []
     for x in filtered:
         cpu_proximity = abs(cpu_value - x[cpu_key])
+        #print(f">>> {cpu_proximity} = abs({cpu_value} - {x[cpu_key]})")
         x["cpu_proximity"] = cpu_proximity
         cpu_proximity_list.append(cpu_proximity)
+    if args.debug_right_size:
+        print(f">>> CPU Proximity: {cpu_proximity_list}")
+        print()
 
     # Filter memory list to get the ones with min cpu proximity
     min_proximity = min(cpu_proximity_list)
+    if args.debug_right_size:
+        print(f">>> Min CPU Proximity: == {min_proximity}")
+        print()
+
     filtered = [ x for x in filtered if x["cpu_proximity"] == min_proximity ]
+    if args.debug_right_size:
+        print(f">>> Filtered by CPU Proximity: == {min_proximity}")
+        print_instance(filtered, args)
+        print()
 
     # Sort to get the min price
     price_sorted = sorted(filtered, key=lambda x: (x[price_key], x["id"]))
+    if args.debug_right_size:
+        print(f">>> Sorted by: '{price_key}' and 'id'")
+        print_instance(price_sorted, args)
+        print()
+
+    # Remove the ones with same price
     dedup = remove_duplicate_from_beginning(price_sorted, price_key)
-    return dedup[0]
+    if args.debug_right_size:
+        print(f">>> Dedup by: '{price_key}'")
+        print_instance(dedup, args)
+        print()
+
+    selected = dedup[0]
+    if args.debug_right_size:
+        print(f">>> Selected")
+        print_instance([selected], args)
+        print()
+
+    return selected
 
 def get_direct_match_instance(price_list: list[dict], price_key: str, memory: float, cpu_key: str, cpu_value: int, args: any) -> list[dict]: # , memory_limits: list[tuple], cpu_limits: list[tuple]
     filtered = [ x for x in price_list if x["memory_gigas"] >= memory and x[cpu_key] >= cpu_value ]
-    
+    if args.debug_direct_match:
+        print(f">>> Filtered by memory: >= '{memory}' and '{cpu_key}' >= '{cpu_value}'")
+        print_instance(filtered, args)
+        print()
+
     # Sort to get the min price
     price_sorted = sorted(filtered, key=lambda x: (x[price_key], x["id"]))
+    if args.debug_direct_match:
+        print(f">>> Sorted by: '{price_key}' and 'id'")
+        print_instance(price_sorted, args)
+        print()
+
     dedup = remove_duplicate_from_beginning(price_sorted, price_key)
-    return dedup[0]
+    if args.debug_direct_match:
+        print(f">>> Dedup by: '{price_key}'")
+        print_instance(dedup, args)
+        print()
+
+    selected = dedup[0]
+    if args.debug_direct_match:
+        print(f">>> Selected")
+        print_instance([selected], args)
+        print()
+
+    return selected
 
 
 def print_instance_recommendation(price_list: list[dict], instances_to_match: list[tuple], price_key: str, cpu_key: str, args: any) -> None: # , memory_limits: list[tuple], cpu_limits: list[tuple]
@@ -233,23 +300,23 @@ def print_instance_recommendation(price_list: list[dict], instances_to_match: li
         memory, cpu_value = instance_to_match
         right_size = get_right_size_instance(price_list, price_key, memory, cpu_key, cpu_value, args) # , memory_limits, cpu_limits
         direct_match = get_direct_match_instance(price_list, price_key, memory, cpu_key, cpu_value, args) # , memory_limits, cpu_limits
-        recommendations.append((right_size, direct_match))
+        recommendations.append((right_size, direct_match, memory, cpu_value))
 
     output = args.output
     if output == "table":
         table_header = args.table_header
         if table_header:
-            print(f'{"Instance Type":20} {"vCPU":6} {"Cores":6} {"Memory GiB":12}     {"USD":<10}', end="")
+            print(f'{"CPU":6} {"Mem":6}   {"Instance Type":20} {"vCPU":6} {"Cores":6} {"Memory GiB":12}   {"USD":<10}', end="")
             print("  |  ", end="")
-            print(f'{"Instance Type":20} {"vCPU":6} {"Cores":6} {"Memory GiB":12}     {"USD":<10}')
-            print(f'{"-" * 20} {"-" * 6} {"-" * 6} {"-" * 12}     {"-" * 10}', end="")
+            print(f'{"Instance Type":20} {"vCPU":6} {"Cores":6} {"Memory GiB":12}   {"USD":<10}')
+            print(f'{"-" * 6} {"-" * 6}   {"-" * 20} {"-" * 6} {"-" * 6} {"-" * 12}   {"-" * 10}', end="")
             print("  |  ", end="")
-            print(f'{"-" * 20} {"-" * 6} {"-" * 6} {"-" * 12}     {"-" * 10}')
+            print(f'{"-" * 20} {"-" * 6} {"-" * 6} {"-" * 12}   {"-" * 10}')
         for recommendation in recommendations:
-            x, y = recommendation
-            print(f'{x["instance_type"]:20} {x["vcpu_value"]:6} {x["cores_value"]:6} {x["memory_gigas"]:12}     {x[price_key]:<10}', end="")
+            x, y, memory, cpu_value = recommendation
+            print(f'{cpu_value:6} {memory:6}   {x["instance_type"]:20} {x["vcpu_value"]:6} {x["cores_value"]:6} {x["memory_gigas"]:12}   {x[price_key]:<10}', end="")
             print("  |  ", end="")
-            print(f'{x["instance_type"]:20} {x["vcpu_value"]:6} {x["cores_value"]:6} {x["memory_gigas"]:12}     {x[price_key]:<10}')
+            print(f'{y["instance_type"]:20} {y["vcpu_value"]:6} {y["cores_value"]:6} {y["memory_gigas"]:12}   {y[price_key]:<10}')
     elif output == "json":
         print(json.dumps(recommendations, indent=2))
     else:
@@ -258,19 +325,20 @@ def print_instance_recommendation(price_list: list[dict], instances_to_match: li
 
 # List all
 def print_instance(instances: list[dict], args: any) -> None:
-    sort_by = {
-        "id": "id",
-        "type": "instance_type",
-        "vcpu": "vcpu_value",
-        "cores": "cores_value",
-        "memory": "memory_gigas",
-        "ondemand": "price_ondemand",
-        "nuri3yrstd": "price_nuri_3yr_standard",
-        "nuri1yrstd": "price_nuri_1yr_standard",
-        "nuri3yrconv": "price_nuri_3yr_convertible",
-        "nuri1yrconv": "price_nuri_1yr_convertible",
-    }
-    instances = sorted(instances, key=lambda x: x[sort_by[args.sort_by]], reverse=args.reverse)
+    if not args.debug_right_size and not args.debug_direct_match:
+        sort_by = {
+            "id": "id",
+            "type": "instance_type",
+            "vcpu": "vcpu_value",
+            "cores": "cores_value",
+            "memory": "memory_gigas",
+            "ondemand": "price_ondemand",
+            "nuri3ystd": "price_nuri_3yr_standard",
+            "nuri1ystd": "price_nuri_1yr_standard",
+            "nuri3yrconv": "price_nuri_3yr_convertible",
+            "nuri1yrconv": "price_nuri_1yr_convertible",
+        }
+        instances = sorted(instances, key=lambda x: x[sort_by[args.sort_by]], reverse=args.reverse)
 
     output = args.output
     if output == "table":
@@ -363,7 +431,9 @@ def main():
     For direct-match,
       CPU and Memory recommendation will always be equal or higher.
 
-    Use only current instance types generation!
+    Attention:
+      If there is a price but instance type is not available on describe of the region, it will be removed from list!
+      Use only current instance types generation!
     """
 
     parser = argparse.ArgumentParser(description=description)
@@ -388,6 +458,9 @@ def main():
     group_source.add_argument("--allow-reduce-cpu", help="Allow reduce cpu on right-size recommendation", default=True, action=argparse.BooleanOptionalAction)
     # group_source.add_argument("--memory-limits", help="Tuple of memory size (in GiB) and lower limit accepted. Example: '260,16'. If source memory >= 260, accept instance type memory between 244 and 260", nargs="*")
     # group_source.add_argument("--cpu-limits", help="Tuple of cpu and lower limit accepted. Example: '48,10'. If source cpu >= 48, accept instance type cpu between 38 and 48", nargs="*")
+    group_source.add_argument("--direct", help="Source values direct from command line", default=False, action=argparse.BooleanOptionalAction)
+    group_source.add_argument("--cpu", help="CPU value")
+    group_source.add_argument("--memory", help="Memory (in GiB) value")
 
     group_output = parser.add_argument_group("Output", "Output options")
     group_output.add_argument("--output", help=f"Output format. Default: '{output_choices[0]}'", choices=output_choices, default=output_choices[0])
@@ -426,6 +499,9 @@ def main():
     group_attribute = parser.add_argument_group("List Attribute", "List specific price or instance attribute")
     group_attribute.add_argument("--list-attribute", help="List specific price or instance attribute", default=False, action=argparse.BooleanOptionalAction)
     group_attribute.add_argument("--attribute", help="Attribute to list")
+
+    parser.add_argument("--debug-right-size", help="Enable debug for right-size recommendation?", default=False, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--debug-direct-match", help="Enable debug for direct-match recommendation?", default=False, action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
 
@@ -487,22 +563,22 @@ def main():
     if args.remove_type:
         remove_type = [ x.lower() for x in args.remove_type ]
         price_list  = [ x for x in price_list if str(x["instance_type"]).lower() not in remove_type ]
-    if args.free_tier_eligible:
+    if args.free_tier_eligible != "":
         price_list  = [ x for x in price_list if x["describe"]["FreeTierEligible"] == args.free_tier_eligible ]
-    if args.bare_metal:
+    if args.bare_metal != "":
         price_list  = [ x for x in price_list if x["describe"]["BareMetal"] == args.bare_metal ]
     if args.hypervisor:
         hypervisor = [ x.lower() for x in args.hypervisor ]
-        price_list  = [ x for x in price_list if str(x["describe"]["Hypervisor"]).lower() in hypervisor ]
-    if args.instance_storage_supported:
+        price_list  = [ x for x in price_list if "Hypervisor" in x["describe"] and str(x["describe"]["Hypervisor"]).lower() in hypervisor ]
+    if args.instance_storage_supported != "":
         price_list  = [ x for x in price_list if x["describe"]["InstanceStorageSupported"] == args.instance_storage_supported ]
-    if args.hibernation_supported:
+    if args.hibernation_supported != "":
         price_list  = [ x for x in price_list if x["describe"]["HibernationSupported"] == args.hibernation_supported ]
-    if args.burstable_performance_supported:
+    if args.burstable_performance_supported != "":
         price_list  = [ x for x in price_list if x["describe"]["BurstablePerformanceSupported"] == args.burstable_performance_supported ]
-    if args.dedicated_hosts_supported:
+    if args.dedicated_hosts_supported != "":
         price_list  = [ x for x in price_list if x["describe"]["DedicatedHostsSupported"] == args.dedicated_hosts_supported ]
-    if args.auto_recovery_supported:
+    if args.auto_recovery_supported != "":
         price_list  = [ x for x in price_list if x["describe"]["AutoRecoverySupported"] == args.auto_recovery_supported ]
     if args.processor_features:
         processor_features = [ x.lower() for x in args.processor_features ]
@@ -545,15 +621,7 @@ def main():
     }
     price_key = price_options[selcted_price]
     price_sorted = price_list_sorted(price_list, price_key)
-    #print("Selected price", price_key)
 
-    # # Sort price list by defined price
-    # on_demand_sorted = price_list_sorted(price_list, "price_ondemand")
-    # # price_reserved = No Upfront Reserved Instance (3-year)
-    # reserved_sorted = price_list_sorted(price_list, "price_reserved")
-
-
-    #################################################
     if args.vcpu:
         cpu_key = "vcpu_value"
     elif args.cores:
@@ -562,23 +630,29 @@ def main():
         print("ERROR - Please select 'vcpu' or 'cores'")
         return
 
-    with open(args.file) as f:
-        source_lines = f.readlines()
-
     instances_to_match = []
-    for line in source_lines:
-        if args.file_type == "tsv":
-            line = line.replace("\t", " ").strip()
-        elif args.file_type == "csv":
-            line = line.replace(",", " ").strip()
-        else:
-            print("ERROR - Invalid source file type. Please investigate!!!")
-            return
-        parts = line.split(" ")
-        memory = float(parts[int(args.memory_index)])
-        cpu_value = int(parts[int(args.cpu_index)])
+    if args.direct:
+        memory = float(args.memory)
+        cpu_value = int(args.cpu)
         instances_to_match.append((memory, cpu_value))
-    #instances_to_match = [(260,5)]
+    else:
+        with open(args.file) as f:
+            source_lines = f.readlines()
+
+        
+        for line in source_lines:
+            if args.file_type == "tsv":
+                line = line.replace("\t", " ").strip()
+            elif args.file_type == "csv":
+                line = line.replace(",", " ").strip()
+            else:
+                print("ERROR - Invalid source file type. Please investigate!!!")
+                return
+            parts = line.split(" ")
+            memory = float(parts[int(args.memory_index)])
+            cpu_value = int(parts[int(args.cpu_index)])
+            instances_to_match.append((memory, cpu_value))
+
     print_instance_recommendation(price_sorted, instances_to_match, price_key=price_key, cpu_key=cpu_key, args=args) # , memory_limits=memory_limits, cpu_limits=cpu_limits
 
 if __name__ == "__main__":
