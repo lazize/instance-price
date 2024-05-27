@@ -258,6 +258,20 @@ def print_instance_recommendation(price_list: list[dict], instances_to_match: li
 
 # List all
 def print_instance(instances: list[dict], args: any) -> None:
+    sort_by = {
+        "id": "id",
+        "type": "instance_type",
+        "vcpu": "vcpu_value",
+        "cores": "cores_value",
+        "memory": "memory_gigas",
+        "ondemand": "price_ondemand",
+        "nuri3yrstd": "price_nuri_3yr_standard",
+        "nuri1yrstd": "price_nuri_1yr_standard",
+        "nuri3yrconv": "price_nuri_3yr_convertible",
+        "nuri1yrconv": "price_nuri_1yr_convertible",
+    }
+    instances = sorted(instances, key=lambda x: x[sort_by[args.sort_by]], reverse=args.reverse)
+
     output = args.output
     if output == "table":
         table_header = args.table_header
@@ -335,6 +349,7 @@ def main():
     category_output_choices = ["short", "table"]
     source_file_type_choices = ["csv", "tsv"]
     hypervisor_choices = ["nitro", "xen"]
+    sort_by_choices = ["id", "type", "vcpu", "cores", "memory", "ondemand", "nuri3ystd", "nuri1ystd", "nuri3yconv", "nuri1yconv"]
 
     description ="""
     Get instance recommendation from AWS pricing.
@@ -399,8 +414,10 @@ def main():
     group_filter.add_argument("--auto-recovery-supported", help="Auto recovery supported? If not set will consider all", default="", action=argparse.BooleanOptionalAction)
     group_filter.add_argument("--processor-features", help="Processor features to filter? If not set will consider all (not case sensitive)", nargs="*")
 
-    group_list_all = parser.add_argument_group("List All", "List all price/instance")
-    group_output.add_argument("--list-all", help="List all instance types ordered by selected pricing", default=False, action=argparse.BooleanOptionalAction)
+    group_list_all = parser.add_argument_group("List All", "List all prices")
+    group_list_all.add_argument("--list-all", help="List all instance types with all prices", default=False, action=argparse.BooleanOptionalAction)
+    group_list_all.add_argument("--sort-by", help=f"Sort price list. Default: '{sort_by_choices[0]}'", choices=sort_by_choices, default=sort_by_choices[0])
+    group_list_all.add_argument("--reverse", help="Sort in reverse order?", default=False, action=argparse.BooleanOptionalAction)
 
     group_category = parser.add_argument_group("List Category", "List instance type grouped by instance category")
     group_category.add_argument("--list-category", help="List all instance types grouped by instance category", default=False, action=argparse.BooleanOptionalAction)
@@ -504,6 +521,11 @@ def main():
         print_attribute(price_list, args)
         return
 
+    # List all instance types on teh same order it was loaded
+    if args.list_all:
+        print_instance(price_list, args)
+        return
+
 
     # Everything down here requires to sort the price list
     if args.on_demand:
@@ -524,10 +546,6 @@ def main():
     price_key = price_options[selcted_price]
     price_sorted = price_list_sorted(price_list, price_key)
     #print("Selected price", price_key)
-
-    if args.list_all:
-        print_instance(price_sorted, args)
-        return
 
     # # Sort price list by defined price
     # on_demand_sorted = price_list_sorted(price_list, "price_ondemand")
